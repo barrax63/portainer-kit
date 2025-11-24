@@ -68,8 +68,8 @@ After starting the stack, access Portainer:
 
 This kit runs minimal services with restricted access.
 
-| Container       | Image                           | Hostname   | Port(s)          | Access                          |
-|-----------------|----------------------------------|------------|------------------|----------------------------------|
+| Container       | Image                           | Hostname   | Port(s)          | Access                           |
+|-----------------|---------------------------------|------------|------------------|----------------------------------|
 | `portainer`     | `portainer/portainer-ce:alpine` | portainer  | 9443 (HTTPS)     | From host/LAN                    |
 | `cloudflared`   | `cloudflare/cloudflared:latest` | cloudflared| -/-              | Outbound tunnel only (optional)  |
 
@@ -81,7 +81,7 @@ This kit runs minimal services with restricted access.
 
 ### Expose Portainer through Cloudflare Tunnel (optional)
 
-1. Create a Cloudflare Tunnel and HTTP route pointing to `http://portainer:9443` or `https://portainer:9443` (Cloudflare can terminate TLS; both work).
+1. Create a Cloudflare Tunnel and HTTP route pointing to `http://portainer:9000`.
 2. Copy the generated token into `.env` as `CLOUDFLARED_TUNNEL_TOKEN`.
 3. Start Cloudflared:
 
@@ -134,134 +134,8 @@ Add:
 
 Your `.env.example` should include:
 
-#### Standard configuration (required)
-
 - `TZ` – Timezone (e.g., `Europe/Berlin`)
 - `CLOUDFLARED_TUNNEL_TOKEN` – Only if using the Cloudflare profile
-
-#### Advanced configuration (optional)
-
-- Adjust network subnet in compose if needed (`10.254.5.0/24`)
-- Customize resource limits if you deploy to Swarm (note: deploy.resources are ignored by non‑Swarm docker compose)
-
-### Security features
-
-This setup includes hardening measures:
-
-- No new privileges (`no-new-privileges:true`)
-- AppArmor profile (`apparmor=docker-default`)
-- Capabilities: drop all, add only required (CHOWN, FOWNER, SETGID, SETUID)
-- Read-only filesystem with tmpfs for `/tmp` and `/run`
-- Log rotation via json-file options
-- Network isolation on a user-defined bridge
-
-## Tips & tricks
-
-### Healthcheck verification
-
-- The Portainer image (alpine) includes BusyBox `wget`.
-- Healthcheck uses array form (no shell needed):
-
-```yaml
-healthcheck:
-  test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://127.0.0.1:9443/"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 30s
-```
-
-Check health:
-
-```bash
-docker compose ps
-docker inspect -f '{{json .State.Health}}' portainer-portainer-1 | jq
-```
-
-### Logs and monitoring
-
-```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f portainer
-docker compose logs -f cloudflared
-```
-
-### Resource management
-
-The compose file includes Swarm-style `deploy.resources` which are ignored by docker compose (non‑Swarm). If you need hard limits without Swarm, consider legacy keys supported by compose on your platform:
-
-```yaml
-# Example (non-standardized across all engines):
-# cpus: "1.0"
-# mem_limit: 1g
-```
-
-Or switch to Docker Swarm to enforce `deploy.resources`.
-
-### Troubleshooting
-
-#### “Podman environment option doesn’t support Docker environments”
-
-- Ensure the local endpoint is set to Docker, not Podman:
-  - Portainer UI → Environments → Edit “local” → Type: Docker (socket: `unix:///var/run/docker.sock`)
-
-#### Healthcheck failing
-
-- Ensure you’re using HTTPS on 9443 in the healthcheck
-- Increase `start_period` to 60–90s on first boot if needed
-- Confirm `wget` exists (it does in `:alpine`); if you switch images, adapt the command
-
-#### Cloudflare tunnel not working
-
-```bash
-docker compose logs cloudflared
-docker compose config | grep CLOUDFLARED_TUNNEL_TOKEN
-```
-
-Verify that your Cloudflare route points to the service correctly (e.g., http://portainer:9443) and that the token is valid.
-
-## Project files
-
-- `docker-compose.yml` – Main stack definition
-- `.env.example` – Template for environment variables
-
-Example docker-compose.yml (excerpt):
-
-```yaml
-services:
-  portainer:
-    image: portainer/portainer-ce:alpine
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_storage:/data
-    read_only: true
-    tmpfs: ["/tmp", "/run"]
-    healthcheck:
-      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://127.0.0.1:9443/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    profiles: ["cloudflared"]
-    env_file:
-      - path: .env
-        required: true
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARED_TUNNEL_TOKEN}
-    command: tunnel --metrics 127.0.0.1:60123 --no-autoupdate run
-    healthcheck:
-      test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:60123", "ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-```
 
 ## 📜 License
 

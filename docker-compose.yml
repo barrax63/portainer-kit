@@ -45,7 +45,7 @@ services:
       - /tmp
       - /run
     healthcheck:
-      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://127.0.0.1:9443/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9000/"]
       interval: 30s
       timeout: 10s
       retries: 3
