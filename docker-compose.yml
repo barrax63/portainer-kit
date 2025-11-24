@@ -1,0 +1,93 @@
+name: portainer-kit
+
+volumes:
+  portainer_storage:
+
+networks:
+  main:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.254.5.0/24
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-security-baseline: &security-baseline
+  security_opt:
+    - no-new-privileges:true
+    - apparmor=docker-default
+  cap_drop:
+    - ALL
+
+services:
+  portainer:
+    <<: *security-baseline
+    image: portainer/portainer-ce:alpine
+    hostname: portainer
+    networks: ['main']
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - SETGID
+      - SETUID
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_storage:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://127.0.0.1:9443/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging: *default-logging
+
+  # ---- Cloudflare reverse proxy ----
+  cloudflared:
+    <<: *security-baseline
+    image: cloudflare/cloudflared:latest
+    profiles: ["cloudflared"]
+    networks: ['main']
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARED_TUNNEL_TOKEN}
+    read_only: true
+    tmpfs:
+      - /tmp
+    command: tunnel --metrics 127.0.0.1:60123 --no-autoupdate run
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:60123", "ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging: *default-logging
