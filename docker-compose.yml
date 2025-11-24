@@ -30,8 +30,6 @@ services:
     hostname: portainer
     networks: ['main']
     restart: unless-stopped
-    environment:
-      - TZ=${TZ}
     cap_add:
       - CHOWN
       - FOWNER
@@ -39,6 +37,7 @@ services:
       - SETUID
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime
       - portainer_storage:/data
     read_only: true
     tmpfs:

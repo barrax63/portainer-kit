@@ -44,7 +44,6 @@ docker compose up -d
 
 > [!IMPORTANT]
 > Update the following variables in your `.env` file:
-> - `TZ` – Your timezone (e.g., `Europe/Berlin`, `America/New_York`)
 > - `CLOUDFLARED_TUNNEL_TOKEN` – Only required if you enable the Cloudflare profile
 
 ## ⚡️ Quick start and usage
@@ -127,15 +126,6 @@ Add:
 - Business vs CE comparison: https://www.portainer.io/products
 - Cloudflared Docs: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
 - Docker Healthcheck reference: https://docs.docker.com/engine/reference/builder/#healthcheck
-
-## Configuration Guide
-
-### Environment variables
-
-Your `.env.example` should include:
-
-- `TZ` – Timezone (e.g., `Europe/Berlin`)
-- `CLOUDFLARED_TUNNEL_TOKEN` – Only if using the Cloudflare profile
 
 ## 📜 License
 
