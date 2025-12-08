@@ -66,9 +66,6 @@ services:
     profiles: ["cloudflared"]
     networks: ['main']
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: true
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARED_TUNNEL_TOKEN}
     read_only: true
